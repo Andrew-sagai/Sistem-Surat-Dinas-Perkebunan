@@ -10,23 +10,11 @@ export default function Home() {
   useEffect(() => {
     if (!isHydrated) return;
     if (state.currentUser) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } else {
-      router.push('/login');
+      router.replace('/login');
     }
   }, [state.currentUser, isHydrated, router]);
 
-  return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg-primary)'
-    }}>
-      <div style={{ animation: 'pulse 1.5s infinite', color: 'var(--text-muted)' }}>
-        Memuat...
-      </div>
-    </div>
-  );
+  return null;
 }

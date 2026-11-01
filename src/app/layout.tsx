@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Public_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
+import StartupScreen from "@/components/layout/StartupScreen";
 
 const publicSans = Public_Sans({ 
   subsets: ["latin"],
@@ -35,7 +36,7 @@ export default function RootLayout({
     <html lang="id" className={`${publicSans.variable} ${sourceSerif.variable}`}>
       <body>
         <StoreProvider>
-          {children}
+          <StartupScreen>{children}</StartupScreen>
         </StoreProvider>
       </body>
     </html>
