@@ -1,4 +1,4 @@
-# mockup-skripsi-2
+# Sistem Persuratan Dinas Perkebunan
 
 Sistem Informasi Manajemen Persuratan & Disposisi Elektronik (e-Surat Distan) — Dinas Pertanian Kabupaten Minahasa Selatan.
 
