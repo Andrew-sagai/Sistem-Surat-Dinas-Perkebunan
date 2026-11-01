@@ -193,7 +193,6 @@ export interface User {
   nip?: string;
   jabatan?: string;
   urlTandaTangan?: string; // Gambar tanda tangan digital tersimpan (PNG transparan / data URL)
-  dummyPassword?: string; // HANYA prototipe; produksi memakai Supabase Auth
   /** auth.users.id — hanya terisi pada mode Supabase */
   authId?: string;
   createdAt: string;

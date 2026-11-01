@@ -1,23 +1,18 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { routePermissions } from '@/lib/rbac';
-import { checkRemindersAndOverdue } from '@/lib/reminders';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { state, isHydrated, dispatch, generateId, isSupabase } = useStore();
+  const { state, isHydrated } = useStore();
   const router = useRouter();
   const pathname = usePathname();
-  // Ref untuk mencegah reminder check berjalan lebih dari sekali per mount
-  const reminderChecked = useRef(false);
 
   useEffect(() => {
-    // Jangan redirect sebelum localStorage selesai dibaca di render pertama —
-    // tanpa guard ini user yang punya sesi valid akan di-redirect ke /login
-    // karena state.currentUser masih null saat hydration belum selesai.
+    // Tunggu pemulihan sesi Auth dan profil sebelum menentukan rute.
     if (!isHydrated) return;
 
     if (!state.currentUser) {
@@ -32,29 +27,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/403');
     }
   }, [state.currentUser, isHydrated, router, pathname]);
-
-  // ── Trigger reminder & overdue check saat user login (sekali per mount) ──
-  // Hanya pada Mode Demo. Pada Mode Supabase, pengingat digenerate pg_cron di
-  // server sehingga pemeriksaan client-side akan menghasilkan notifikasi ganda.
-  // Referensi: Proposal poin 13(d)(e), Bab 4 subbab Notifikasi Otomatis.
-  useEffect(() => {
-    if (isSupabase) return;
-    if (!isHydrated || !state.currentUser) return;
-    if (reminderChecked.current) return;
-    reminderChecked.current = true;
-
-    const { updatedDisposisi, newNotifikasi } = checkRemindersAndOverdue(state);
-
-    // Dispatch notifikasi baru
-    newNotifikasi.forEach(n => {
-      dispatch({ type: 'ADD_NOTIFIKASI', payload: { ...n, id: `n-${generateId('rem')}` } });
-    });
-
-    // Update field reminderSentAt / overdueSentAt di disposisi terkait
-    updatedDisposisi.forEach(u => {
-      dispatch({ type: 'UPDATE_DISPOSISI', payload: u } as any);
-    });
-  }, [isHydrated, state.currentUser, isSupabase]);
 
   // Tampilkan null selama hydration berlangsung atau currentUser belum ada.
   // Ini mencegah flash redirect dan rendering layout tanpa user.

@@ -1,18 +1,6 @@
 'use client';
-// ============================================================
-// API UTAMA — dispatcher dua mode
-//
-// Mode Demo  : seluruh data & mutasi tetap di browser (localStorage),
-//              memakai implementasi lama di ./api.legacy.ts.
-// Mode Supabase: Postgres sebagai sumber kebenaran; mutasi lewat RPC
-//              SECURITY DEFINER sehingga otorisasi ditegakkan di server.
-//
-// Bentuk pemanggilan tidak berubah: seluruh fungsi di sini `async`.
-// ============================================================
 import { useMemo } from 'react';
 import { useStore } from './store';
-import { useLegacyBusinessLogic } from './api.legacy';
-import { supabaseAktif } from './data/supabase';
 import type { Konteks } from './data/mutasi';
 import * as mutasi from './data/mutasi';
 import type {
@@ -27,8 +15,6 @@ import type {
 
 export function useBusinessLogic() {
   const store = useStore();
-  const legacy = useLegacyBusinessLogic();
-  const modeSupabase = supabaseAktif();
 
   const ctx = useMemo<Konteks>(
     () => ({
@@ -45,14 +31,12 @@ export function useBusinessLogic() {
     data: Partial<SuratMasuk>,
     file: File | null
   ): Promise<string> => {
-    if (modeSupabase) return mutasi.catatSuratMasuk(ctx, data, file);
-    return legacy.apiCatatSuratMasuk(data, file);
+    return mutasi.catatSuratMasuk(ctx, data, file);
   };
 
   // ── Disposisi ───────────────────────────────────────────
   const apiBuatDisposisi = async (suratMasukId: string): Promise<string> => {
-    if (modeSupabase) return mutasi.buatDisposisi(ctx, suratMasukId);
-    return legacy.apiBuatDisposisi(suratMasukId);
+    return mutasi.buatDisposisi(ctx, suratMasukId);
   };
 
   const apiBeriDisposisi = async (
@@ -65,7 +49,6 @@ export function useBusinessLogic() {
     instruksiList?: InstruksiDisposisi[],
     sifat?: SifatSurat
   ): Promise<void> => {
-    if (modeSupabase)
       return mutasi.beriDisposisi(
         ctx,
         dispId,
@@ -77,21 +60,10 @@ export function useBusinessLogic() {
         instruksiList,
         sifat
       );
-    return legacy.apiBeriDisposisi(
-      dispId,
-      instruksi,
-      bidangTujuanIds,
-      catatan,
-      tenggat,
-      instruksiLainnya,
-      instruksiList,
-      sifat
-    );
   };
 
   const apiTerimaDisposisi = async (dispId: string): Promise<void> => {
-    if (modeSupabase) return mutasi.terimaDisposisi(ctx, dispId);
-    return legacy.apiTerimaDisposisi(dispId);
+    return mutasi.terimaDisposisi(ctx, dispId);
   };
 
   const apiTeruskanKeStaf = async (
@@ -99,8 +71,7 @@ export function useBusinessLogic() {
     stafId: string,
     catatanPenugasan: string
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.teruskanKeStaf(ctx, dispId, stafId, catatanPenugasan);
-    return legacy.apiTeruskanKeStaf(dispId, stafId, catatanPenugasan);
+    return mutasi.teruskanKeStaf(ctx, dispId, stafId, catatanPenugasan);
   };
 
   const apiTindakLanjutLangsung = async (
@@ -109,14 +80,11 @@ export function useBusinessLogic() {
     file: File | null,
     perluSuratJawaban: boolean = false
   ): Promise<void> => {
-    if (modeSupabase)
       return mutasi.tindakLanjutLangsung(ctx, dispId, uraianHasil, file, perluSuratJawaban);
-    return legacy.apiTindakLanjutLangsung(dispId, uraianHasil, file, perluSuratJawaban);
   };
 
   const apiSimpanProgres = async (dispId: string, catatanProgres: string): Promise<void> => {
-    if (modeSupabase) return mutasi.simpanProgres(ctx, dispId, catatanProgres);
-    return legacy.apiSimpanProgres(dispId, catatanProgres);
+    return mutasi.simpanProgres(ctx, dispId, catatanProgres);
   };
 
   const apiLaporkanHasil = async (
@@ -124,8 +92,7 @@ export function useBusinessLogic() {
     uraianHasil: string,
     file: File | null
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.laporkanHasil(ctx, dispId, uraianHasil, file);
-    return legacy.apiLaporkanHasil(dispId, uraianHasil, file);
+    return mutasi.laporkanHasil(ctx, dispId, uraianHasil, file);
   };
 
   const apiPeriksaLaporan = async (
@@ -134,24 +101,19 @@ export function useBusinessLogic() {
     catatan: string,
     perluSuratJawaban: boolean = false
   ): Promise<void> => {
-    if (modeSupabase)
       return mutasi.periksaLaporan(ctx, tlId, setuju, catatan, perluSuratJawaban);
-    return legacy.apiPeriksaLaporan(tlId, setuju, catatan, perluSuratJawaban);
   };
 
   const apiBeriCatatanSekdis = async (dispId: string, catatan: string): Promise<void> => {
-    if (modeSupabase) return mutasi.beriCatatanSekdis(ctx, dispId, catatan);
-    return legacy.apiBeriCatatanSekdis(dispId, catatan);
+    return mutasi.beriCatatanSekdis(ctx, dispId, catatan);
   };
 
   const apiBubuhkanParaf = async (dispId: string): Promise<void> => {
-    if (modeSupabase) return mutasi.bubuhkanParaf(ctx, dispId);
-    return legacy.apiBubuhkanParaf(dispId);
+    return mutasi.bubuhkanParaf(ctx, dispId);
   };
 
   const apiTidakPerluDisposisi = async (dispId: string, catatan: string): Promise<void> => {
-    if (modeSupabase) return mutasi.tidakPerluDisposisi(ctx, dispId, catatan);
-    return legacy.apiTidakPerluDisposisi(dispId, catatan);
+    return mutasi.tidakPerluDisposisi(ctx, dispId, catatan);
   };
 
   // ── Surat keluar ────────────────────────────────────────
@@ -159,8 +121,7 @@ export function useBusinessLogic() {
     data_: Partial<SuratKeluar>,
     asDraft: boolean = false
   ): Promise<string> => {
-    if (modeSupabase) return mutasi.ajukanSuratKeluar(ctx, data_, asDraft);
-    return legacy.apiAjukanSuratKeluar(data_, asDraft);
+    return mutasi.ajukanSuratKeluar(ctx, data_, asDraft);
   };
 
   const apiParafKoordinasi = async (
@@ -168,23 +129,19 @@ export function useBusinessLogic() {
     setuju: boolean,
     catatan: string
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.parafKoordinasi(ctx, skId, setuju, catatan);
-    return legacy.apiParafKoordinasi(skId, setuju, catatan);
+    return mutasi.parafKoordinasi(ctx, skId, setuju, catatan);
   };
 
   const apiTandatanganSurat = async (skId: string, passwordConfirm: string): Promise<void> => {
-    if (modeSupabase) return mutasi.tandatanganSurat(ctx, skId, passwordConfirm);
-    return legacy.apiTandatanganSurat(skId, passwordConfirm);
+    return mutasi.tandatanganSurat(ctx, skId, passwordConfirm);
   };
 
   const apiTolakSuratKeluar = async (skId: string, catatan: string): Promise<void> => {
-    if (modeSupabase) return mutasi.tolakSuratKeluar(ctx, skId, catatan);
-    return legacy.apiTolakSuratKeluar(skId, catatan);
+    return mutasi.tolakSuratKeluar(ctx, skId, catatan);
   };
 
   const apiTerbitkanNomorSurat = async (skId: string): Promise<string> => {
-    if (modeSupabase) return mutasi.terbitkanNomorSurat(ctx, skId);
-    return legacy.apiTerbitkanNomorSurat(skId);
+    return mutasi.terbitkanNomorSurat(ctx, skId);
   };
 
   const apiDokumentasikanDanKirimSuratKeluar = async (
@@ -192,8 +149,7 @@ export function useBusinessLogic() {
     tanggalKirim: string,
     file: File | null
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.kirimSuratKeluar(ctx, skId, tanggalKirim, file);
-    return legacy.apiDokumentasikanDanKirimSuratKeluar(skId, tanggalKirim, file);
+    return mutasi.kirimSuratKeluar(ctx, skId, tanggalKirim, file);
   };
 
   const apiBuktiTerima = async (
@@ -201,14 +157,12 @@ export function useBusinessLogic() {
     tanggalDiterima: string,
     namaPenerima: string
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.buktiTerima(ctx, skId, tanggalDiterima, namaPenerima);
-    return legacy.apiBuktiTerima(skId, tanggalDiterima, namaPenerima);
+    return mutasi.buktiTerima(ctx, skId, tanggalDiterima, namaPenerima);
   };
 
   // ── Arsip ───────────────────────────────────────────────
   const apiVerifikasiArsip = async (arsipId: string): Promise<void> => {
-    if (modeSupabase) return mutasi.verifikasiArsip(ctx, arsipId);
-    return legacy.apiVerifikasiArsip(arsipId);
+    return mutasi.verifikasiArsip(ctx, arsipId);
   };
 
   const apiKoreksiMetadataArsip = async (
@@ -217,9 +171,7 @@ export function useBusinessLogic() {
     klasifikasiIdBaru: string | null,
     alasan: string
   ): Promise<void> => {
-    if (modeSupabase)
       return mutasi.koreksiMetadataArsip(ctx, arsipId,perihalBaru, klasifikasiIdBaru, alasan);
-    return legacy.apiKoreksiMetadataArsip(arsipId, perihalBaru, klasifikasiIdBaru, alasan);
   };
 
   // ── Pengguna ────────────────────────────────────────────
@@ -228,39 +180,33 @@ export function useBusinessLogic() {
     email: string,
     role: UserRole,
     unitKerjaId?: string | null,
-    dummyPassword?: string
+    password?: string
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.tambahPengguna(ctx, nama, email, role, unitKerjaId, dummyPassword);
-    return legacy.apiTambahPengguna(nama, email, role, unitKerjaId, dummyPassword);
+    return mutasi.tambahPengguna(ctx, nama, email, role, unitKerjaId, password);
   };
 
   const apiUbahPengguna = async (
     userId: string,
     payload: { nama: string; email: string; role: UserRole; unitKerjaId?: string | null }
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.ubahPengguna(ctx, userId, payload);
-    return legacy.apiUbahPengguna(userId, payload);
+    return mutasi.ubahPengguna(ctx, userId, payload);
   };
 
   const apiTogglePengguna = async (userId: string): Promise<void> => {
-    if (modeSupabase) return mutasi.togglePengguna(ctx, userId);
-    return legacy.apiTogglePengguna(userId);
+    return mutasi.togglePengguna(ctx, userId);
   };
 
   const apiResetPassword = async (targetUserId: string, newPassword?: string): Promise<string> => {
-    if (modeSupabase) return mutasi.resetPassword(ctx, targetUserId, newPassword);
-    return legacy.apiResetPassword(targetUserId, newPassword);
+    return mutasi.resetPassword(ctx, targetUserId, newPassword);
   };
 
   // ── Tanda tangan digital ────────────────────────────────
   const apiUploadTandaTangan = async (userId: string, dataUrl: string): Promise<void> => {
-    if (modeSupabase) return mutasi.uploadTandaTangan(ctx, userId, dataUrl);
-    return legacy.apiUploadTandaTangan(userId, dataUrl);
+    return mutasi.uploadTandaTangan(ctx, userId, dataUrl);
   };
 
   const apiHapusTandaTangan = async (userId: string): Promise<void> => {
-    if (modeSupabase) return mutasi.hapusTandaTangan(ctx, userId);
-    return legacy.apiHapusTandaTangan(userId);
+    return mutasi.hapusTandaTangan(ctx, userId);
   };
 
   // ── Data master ─────────────────────────────────────────
@@ -271,27 +217,22 @@ export function useBusinessLogic() {
     urutanLembar?: number,
     jenis: 'sekretariat' | 'bidang' = 'bidang'
   ): Promise<void> => {
-    if (modeSupabase)
       return mutasi.tambahUnitKerja(ctx, kode, nama, labelLembar, urutanLembar, jenis);
-    return legacy.apiTambahUnitKerja(kode, nama, labelLembar, urutanLembar, jenis);
   };
 
   const apiUbahUnitKerja = async (
     id: string,
     payload: { nama: string; kode?: string; labelLembar?: string; urutanLembar?: number }
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.ubahUnitKerja(ctx, id, payload);
-    return legacy.apiUbahUnitKerja(id, payload);
+    return mutasi.ubahUnitKerja(ctx, id, payload);
   };
 
   const apiToggleUnitKerja = async (id: string): Promise<void> => {
-    if (modeSupabase) return mutasi.toggleUnitKerja(ctx, id);
-    return legacy.apiToggleUnitKerja(id);
+    return mutasi.toggleUnitKerja(ctx, id);
   };
 
   const apiHapusUnitKerja = async (id: string): Promise<void> => {
-    if (modeSupabase) return mutasi.hapusUnitKerja(ctx, id);
-    return legacy.apiHapusUnitKerja(id);
+    return mutasi.hapusUnitKerja(ctx, id);
   };
 
   const apiTambahKlasifikasi = async (
@@ -300,21 +241,18 @@ export function useBusinessLogic() {
     uraian?: string,
     unitKerjaId?: string | null
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.tambahKlasifikasi(ctx, kode, nama, uraian, unitKerjaId);
-    return legacy.apiTambahKlasifikasi(kode, nama, uraian, unitKerjaId);
+    return mutasi.tambahKlasifikasi(ctx, kode, nama, uraian, unitKerjaId);
   };
 
   const apiUbahKlasifikasi = async (
     id: string,
     payload: { nama: string; kode?: string; uraian?: string; unitKerjaId?: string | null }
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.ubahKlasifikasi(ctx, id, payload);
-    return legacy.apiUbahKlasifikasi(id, payload);
+    return mutasi.ubahKlasifikasi(ctx, id, payload);
   };
 
   const apiToggleKlasifikasi = async (id: string): Promise<void> => {
-    if (modeSupabase) return mutasi.toggleKlasifikasi(ctx, id);
-    return legacy.apiToggleKlasifikasi(id);
+    return mutasi.toggleKlasifikasi(ctx, id);
   };
 
   const apiTambahDataMaster = async (
@@ -323,11 +261,9 @@ export function useBusinessLogic() {
     label: string,
     keterangan?: string,
     urutan?: number,
-    meta?: Record<string, any>
+    meta?: Record<string, unknown>
   ): Promise<string> => {
-    if (modeSupabase)
       return mutasi.tambahDataMaster(ctx, kategori, kode, label, keterangan, urutan, meta);
-    return legacy.apiTambahDataMaster(kategori, kode, label, keterangan, urutan, meta);
   };
 
   const apiUbahDataMaster = async (
@@ -337,16 +273,14 @@ export function useBusinessLogic() {
       label?: string;
       keterangan?: string;
       urutan?: number;
-      meta?: Record<string, any>;
+      meta?: Record<string, unknown>;
     }
   ): Promise<void> => {
-    if (modeSupabase) return mutasi.ubahDataMaster(ctx, id, payload);
-    return legacy.apiUbahDataMaster(id, payload);
+    return mutasi.ubahDataMaster(ctx, id, payload);
   };
 
   const apiToggleDataMaster = async (id: string): Promise<void> => {
-    if (modeSupabase) return mutasi.toggleDataMaster(ctx, id);
-    return legacy.apiToggleDataMaster(id);
+    return mutasi.toggleDataMaster(ctx, id);
   };
 
   // ── Utilitas ────────────────────────────────────────────
@@ -356,13 +290,11 @@ export function useBusinessLogic() {
    * tidak melakukan apa pun di sisi klien.
    */
   const apiTriggerPengingatBatasWaktu = async (): Promise<void> => {
-    if (modeSupabase) return;
-    return legacy.apiTriggerPengingatBatasWaktu();
+    return;
   };
 
   const apiResetDataSurat = async (): Promise<void> => {
-    if (modeSupabase) return mutasi.resetDataSurat(ctx);
-    return legacy.apiResetDataSurat();
+    return mutasi.resetDataSurat(ctx);
   };
 
   return {

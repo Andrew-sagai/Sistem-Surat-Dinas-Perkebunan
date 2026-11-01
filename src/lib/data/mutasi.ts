@@ -342,27 +342,21 @@ export async function tambahPengguna(
   unitKerjaId?: string | null,
   kataSandi?: string
 ): Promise<void> {
-  const hasil = await rpc<{ id: string }>('rpc_tambah_pengguna', {
-    p_nama: nama,
-    p_email: email,
-    p_role: role,
-    p_unit_kerja_id: unitKerjaId ?? null,
-  });
-
+  if (!kataSandi || kataSandi.length < 12) throw new GalatData('Kata sandi minimal 12 karakter.');
   // Akun Auth dibuat lewat Route Handler (butuh service_role).
   const res = await fetch('/api/admin/akun', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      domainUserId: hasil.id,
+      nama, role, unitKerjaId,
       email,
-      password: kataSandi || 'Password123!',
+      password: kataSandi,
     }),
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => null);
     throw new GalatData(
-      detail?.galat || 'Akun berhasil dibuat, tetapi akun Auth gagal disiapkan. Jalankan ulang skrip seed.'
+      detail?.galat || 'Gagal membuat akun pengguna.'
     );
   }
   await ctx.muatUlang();
@@ -373,13 +367,15 @@ export async function ubahPengguna(
   userId: string,
   data: { nama: string; email: string; role: UserRole; unitKerjaId?: string | null }
 ): Promise<void> {
-  await rpc('rpc_ubah_pengguna', {
-    p_user_id: userId,
-    p_nama: data.nama,
-    p_email: data.email,
-    p_role: data.role,
-    p_unit_kerja_id: data.unitKerjaId ?? null,
+  const res = await fetch('/api/admin/akun', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, ...data }),
   });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new GalatData(detail?.galat || 'Gagal memperbarui akun pengguna.');
+  }
   await ctx.muatUlang();
 }
 
@@ -393,7 +389,8 @@ export async function resetPassword(
   targetUserId: string,
   newPassword?: string
 ): Promise<string> {
-  const kataSandi = newPassword || 'Password123!';
+  if (!newPassword || newPassword.length < 12) throw new GalatData('Kata sandi minimal 12 karakter.');
+  const kataSandi = newPassword;
   const res = await fetch('/api/admin/reset-password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

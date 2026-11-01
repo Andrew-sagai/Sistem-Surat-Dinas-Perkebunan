@@ -93,6 +93,10 @@ const [{ rows: tabel }, { rows: fungsi }, { rows: policy }, { rows: seed }] = aw
 ]);
 
 console.log('\nRingkasan:');
+for (const key of ['pengguna', 'surat_masuk', 'surat_keluar', 'arsip']) {
+  if (Number(seed[0][key]) !== 0) throw new Error(`Instalasi baru harus kosong: ${key}`);
+}
+if (Number(seed[0].unit_kerja) === 0) throw new Error('Data master unit kerja tidak terpasang.');
 console.log(`  Tabel public : ${tabel[0].n}`);
 console.log(`  Fungsi public: ${fungsi[0].n}`);
 console.log(`  Policy RLS   : ${policy[0].n}`);

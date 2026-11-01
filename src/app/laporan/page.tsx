@@ -6,7 +6,6 @@ import {
   STATUS_SURAT_MASUK_LABELS, STATUS_SURAT_KELUAR_LABELS,
   SIFAT_SURAT_LABELS, USER_ROLE_LABELS, SuratMasuk, SuratKeluar
 } from '@/lib/types';
-import { BUKU_EKSPEDISI_DATA } from '@/lib/mock-data';
 import {
   BookOpen, Printer, Download, Search, MailOpen, Send,
   FileCheck, Calendar, Filter, RotateCcw, Clock, ShieldAlert,
@@ -210,13 +209,13 @@ export default function LaporanPage() {
 
   // ─── Data Terfilter: Buku Ekspedisi Persuratan (Lampiran 1 hlm. 92) ───────────
   const dataBukuEkspedisi = useMemo(() => {
-    // 1. Data utama seed wajib dari buku fisik ekspedisi (Lampiran 1)
-    const seedRows = BUKU_EKSPEDISI_DATA.map((item) => ({
+    // Gabungkan buku ekspedisi tersimpan dengan disposisi yang belum tercatat di buku.
+    const seedRows = state.bukuEkspedisi.map((item) => ({
       id: item.id,
       hariTanggal: item.hariTanggal,
       tanggal: item.tanggal,
       dokumen: item.dokumen,
-      tujuanTtdList: item.tujuanTtdList,
+      tujuanTtdList: item.tujuan.map(({ tujuan, penerimaParaf, tanggalTerima }) => ({ tujuan, penerimaParaf, tanggalTerima })),
     }));
 
     // 2. Transaksi dinamis tambahan dari surat masuk yang didisposisikan
@@ -272,7 +271,7 @@ export default function LaporanPage() {
           )
         );
       });
-  }, [scopedSM, state.disposisi, state.unitKerja, periode, filterBulan, filterTahun, search]);
+  }, [scopedSM, state.bukuEkspedisi, state.disposisi, state.unitKerja, periode, filterBulan, filterTahun, search]);
 
   if (!user) return null;
 

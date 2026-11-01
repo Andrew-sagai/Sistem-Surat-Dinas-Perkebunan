@@ -8,7 +8,7 @@ let cached: SupabaseClient | null = null;
 
 /**
  * Klien Supabase untuk berjalan di browser.
- * Mengembalikan `null` bila Supabase belum dikonfigurasi (Mode Demo).
+ * Mengembalikan `null` bila Supabase belum dikonfigurasi.
  */
 export function getSupabaseBrowser(): SupabaseClient | null {
   if (!isSupabaseConfigured()) return null;

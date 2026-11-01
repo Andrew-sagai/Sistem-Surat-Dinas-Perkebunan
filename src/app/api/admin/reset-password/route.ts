@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const userId = String(body?.userId ?? '').trim();
-    const password = String(body?.password ?? '').trim();
+    const password = String(body?.password ?? '');
 
     if (!userId || !password) {
       return NextResponse.json(
@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (password.length < 6) {
+    if (password.length < 12) {
       return NextResponse.json(
-        { galat: 'Kata sandi minimal 6 karakter.' },
+        { galat: 'Kata sandi minimal 12 karakter.' },
         { status: 400 }
       );
     }
@@ -41,10 +41,10 @@ export async function POST(request: NextRequest) {
     }
     const { data: pemanggil } = await supabase
       .from('users')
-      .select('role')
+      .select('role, aktif')
       .eq('auth_id', sesi.user.id)
       .maybeSingle();
-    if (!pemanggil || pemanggil.role !== 'admin') {
+    if (!pemanggil?.aktif || pemanggil.role !== 'admin') {
       return NextResponse.json(
         { galat: 'Akses ditolak: Anda tidak memiliki wewenang untuk aksi ini.' },
         { status: 403 }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
     if (!target.auth_id) {
       return NextResponse.json(
-        { galat: 'Pengguna ini belum memiliki akun Auth. Jalankan ulang skrip seed.' },
+        { galat: 'Pengguna ini belum memiliki akun Auth. Hubungi pengelola Supabase.' },
         { status: 409 }
       );
     }

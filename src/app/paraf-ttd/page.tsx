@@ -781,7 +781,7 @@ export default function ParafTtdPage() {
                 <Key size={15} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-muted)' }} />
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                Petunjuk simulasi prototipe: Gunakan kata sandi <code>kadis123</code>.
+                Masukkan kata sandi akun Anda untuk mengonfirmasi tanda tangan.
               </div>
             </div>
           </ModalStandar>

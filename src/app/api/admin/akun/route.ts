@@ -1,104 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServer, getSupabaseAdmin } from '@/lib/supabase/server';
+import { requireSession } from '@/lib/supabase/route-auth';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
 
-/**
- * Membuat akun Supabase Auth untuk pengguna domain yang baru dibuat, lalu
- * menautkan `auth.users.id` ke baris `users`.
- *
- * Catatan: `service_role` hanya dipakai di route server ini — tidak pernah
- * di browser dan tidak pernah pada jalur yang membaca data milik pengguna.
- */
 export async function POST(request: NextRequest) {
+  const session = await requireSession();
+  if (session.response) return session.response;
+  if (session.profile.role !== 'admin') return NextResponse.json({ galat: 'Akses ditolak.' }, { status: 403 });
+  const admin = await getSupabaseAdmin();
+  if (!admin) return NextResponse.json({ galat: 'Konfigurasi administrator belum lengkap.' }, { status: 503 });
   try {
     const body = await request.json();
-    const domainUserId = String(body?.domainUserId ?? '').trim();
-    const email = String(body?.email ?? '').trim().toLowerCase();
-    const password = String(body?.password ?? '').trim();
+    const email = String(body.email ?? '').trim().toLowerCase();
+    const nama = String(body.nama ?? '').trim();
+    const password = String(body.password ?? '');
+    if (!nama || !email || password.length < 12) return NextResponse.json({ galat: 'Nama, email, dan kata sandi minimal 12 karakter wajib diisi.' }, { status: 400 });
+    const { data: auth, error: authError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+    if (authError) return NextResponse.json({ galat: authError.message }, { status: 400 });
 
-    if (!domainUserId || !email || !password) {
-      return NextResponse.json(
-        { galat: 'Parameter domainUserId, email, dan password wajib diisi.' },
-        { status: 400 }
-      );
-    }
-    if (password.length < 6) {
-      return NextResponse.json(
-        { galat: 'Kata sandi minimal 6 karakter.' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = await getSupabaseServer();
-    if (!supabase) {
-      return NextResponse.json(
-        { galat: 'Supabase belum dikonfigurasi. Isi .env.local lalu jalankan ulang aplikasi.' },
-        { status: 503 }
-      );
-    }
-
-    // Hanya Administrator yang boleh membuat akun.
-    const { data: sesi } = await supabase.auth.getUser();
-    if (!sesi.user) {
-      return NextResponse.json({ galat: 'Anda harus login.' }, { status: 401 });
-    }
-    const { data: pemanggil } = await supabase
-      .from('users')
-      .select('role')
-      .eq('auth_id', sesi.user.id)
-      .maybeSingle();
-    if (!pemanggil || pemanggil.role !== 'admin') {
-      return NextResponse.json(
-        { galat: 'Akses ditolak: Anda tidak memiliki wewenang untuk aksi ini.' },
-        { status: 403 }
-      );
-    }
-
-    const admin = await getSupabaseAdmin();
-    if (!admin) {
-      return NextResponse.json(
-        { galat: 'SUPABASE_SERVICE_ROLE_KEY belum diisi pada .env.local.' },
-        { status: 503 }
-      );
-    }
-
-    // Idempoten: kalau akun Auth dengan email ini sudah ada, pakai yang ada.
-    let authId: string | null = null;
-    const { data: daftar, error: errList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (errList) {
-      return NextResponse.json({ galat: errList.message }, { status: 500 });
-    }
-    const ada = daftar.users.find((u) => (u.email ?? '').toLowerCase() === email);
-    if (ada) {
-      authId = ada.id;
-    } else {
-      const { data: dibuat, error: errBuat } = await admin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-      });
-      if (errBuat) {
-        return NextResponse.json({ galat: errBuat.message }, { status: 400 });
-      }
-      authId = dibuat.user.id;
-    }
-
-    const { error: errTaut } = await admin
-      .from('users')
-      .update({ auth_id: authId, updated_at: new Date().toISOString() })
-      .eq('id', domainUserId);
-    if (errTaut) {
-      return NextResponse.json({ galat: errTaut.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      sukses: true,
-      pesan: 'Akun berhasil disiapkan.',
-      data: { domainUserId, authId, email },
+    const { data: profile, error: profileError } = await session.client.rpc('rpc_tambah_pengguna', {
+      p_nama: nama, p_email: email, p_role: body.role, p_unit_kerja_id: body.unitKerjaId ?? null,
     });
-  } catch (galat: any) {
-    return NextResponse.json(
-      { galat: galat?.message || 'Terjadi kesalahan internal server.' },
-      { status: 500 }
-    );
+    if (profileError) {
+      const { error: rollback } = await admin.auth.admin.deleteUser(auth.user.id);
+      return NextResponse.json({ galat: rollback ? 'Profil gagal dibuat dan akun Auth belum dibersihkan. Hubungi pengelola Supabase.' : profileError.message }, { status: 400 });
+    }
+    const { data: linked, error: linkError } = await admin.from('users').update({ auth_id: auth.user.id }).eq('id', profile.id).select('id').single();
+    if (linkError || !linked) {
+      const { error: profileCleanup } = await admin.from('users').delete().eq('id', profile.id).is('auth_id', null);
+      const { error: authCleanup } = await admin.auth.admin.deleteUser(auth.user.id);
+      return NextResponse.json({ galat: profileCleanup || authCleanup ? 'Penautan akun gagal. Periksa profil dan Auth di Supabase sebelum mencoba lagi.' : 'Penautan akun gagal. Silakan coba lagi.' }, { status: 500 });
+    }
+    return NextResponse.json({ sukses: true, data: { id: profile.id } }, { status: 201 });
+  } catch {
+    return NextResponse.json({ galat: 'Gagal membuat akun. Periksa format data dan koneksi server.' }, { status: 400 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const session = await requireSession();
+  if (session.response) return session.response;
+  if (session.profile.role !== 'admin') return NextResponse.json({ galat: 'Akses ditolak.' }, { status: 403 });
+  const admin = await getSupabaseAdmin();
+  if (!admin) return NextResponse.json({ galat: 'Konfigurasi administrator belum lengkap.' }, { status: 503 });
+  try {
+    const body = await request.json();
+    const { data: target, error } = await admin.from('users').select('id, email, auth_id').eq('id', body.userId).single();
+    if (error || !target?.auth_id) return NextResponse.json({ galat: 'Akun Auth pengguna tidak ditemukan.' }, { status: 404 });
+    const email = String(body.email ?? '').trim().toLowerCase();
+    const changed = email !== target.email;
+    if (changed) {
+      const { error: authError } = await admin.auth.admin.updateUserById(target.auth_id, { email, email_confirm: true });
+      if (authError) return NextResponse.json({ galat: authError.message }, { status: 400 });
+    }
+    const { error: updateError } = await session.client.rpc('rpc_ubah_pengguna', {
+      p_user_id: target.id, p_nama: body.nama, p_email: email, p_role: body.role, p_unit_kerja_id: body.unitKerjaId ?? null,
+    });
+    if (updateError) {
+      if (changed) {
+        const { error: rollback } = await admin.auth.admin.updateUserById(target.auth_id, { email: target.email, email_confirm: true });
+        if (rollback) return NextResponse.json({ galat: 'Profil gagal diperbarui. Email Auth perlu diselaraskan oleh pengelola Supabase.' }, { status: 500 });
+      }
+      return NextResponse.json({ galat: updateError.message }, { status: 400 });
+    }
+    return NextResponse.json({ sukses: true });
+  } catch {
+    return NextResponse.json({ galat: 'Gagal memperbarui akun.' }, { status: 400 });
   }
 }

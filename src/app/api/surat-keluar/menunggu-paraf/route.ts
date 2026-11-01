@@ -1,12 +1,8 @@
-import { NextResponse } from 'next/server';
-import { SURAT_KELUAR } from '@/lib/mock-data';
-import { SuratKeluar } from '@/lib/types';
+import { NextRequest } from 'next/server';
+import { GET as daftarSurat } from '../route';
 
-export async function GET() {
-  const data: SuratKeluar[] = SURAT_KELUAR.filter((s: SuratKeluar) => s.status === 'menunggu_paraf');
-  return NextResponse.json({
-    success: true,
-    total: data.length,
-    data,
-  });
+export async function GET(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  url.searchParams.set('status', 'menunggu_paraf');
+  return daftarSurat(new NextRequest(url, { headers: request.headers }));
 }

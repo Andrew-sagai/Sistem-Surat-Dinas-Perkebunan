@@ -56,15 +56,8 @@ export async function proxy(request: NextRequest) {
   const rootPath = `/${pathname.split('/')[1]}`;
   const allowedRoles = routePermissions[rootPath];
 
-  // ── Mode Demo: belum ada Supabase, pakai cookie peran versi lama ─────────
-  if (!isSupabaseConfigured()) {
-    const role = request.cookies.get('userRole')?.value as Role | undefined;
-    if (!role) return redirectTo(request, '/login');
-    if (allowedRoles && !allowedRoles.includes(role)) return redirectTo(request, '/403');
-    return NextResponse.next();
-  }
+  if (!isSupabaseConfigured()) return redirectTo(request, '/login');
 
-  // ── Mode Supabase: session JWT yang sesungguhnya ─────────────────────────
   let response = NextResponse.next({ request });
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
@@ -89,9 +82,11 @@ export async function proxy(request: NextRequest) {
   // pengguna yang sedang login. RLS tetap menjadi pengunci data sebenarnya.
   const { data: profile } = await supabase
     .from('users')
-    .select('role')
+    .select('role, aktif')
     .eq('auth_id', data.user.id)
     .maybeSingle();
+
+  if (!profile?.aktif) return redirectTo(request, '/login');
 
   const role = profile?.role as Role | undefined;
   if (allowedRoles && role && !allowedRoles.includes(role)) {

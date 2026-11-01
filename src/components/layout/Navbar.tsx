@@ -7,7 +7,7 @@ import { USER_ROLE_LABELS } from '@/lib/types';
 import { Bell, ChevronDown, LogOut, User as UserIcon } from 'lucide-react';
 
 export default function Navbar() {
-  const { state, logout, getUnreadCount, dispatch, resetToInitial } = useStore();
+  const { state, logout, getUnreadCount, dispatch } = useStore();
   const router = useRouter();
   const [showNotif, setShowNotif] = useState(false);
   const [showUser, setShowUser] = useState(false);
@@ -146,17 +146,6 @@ export default function Navbar() {
               >
                 <UserIcon size={16} />
                 Profil Saya
-              </button>
-              <button 
-                className="user-dropdown-item warning" 
-                onClick={() => {
-                  if (window.confirm('Reset semua data ke posisi awal mock-data?')) {
-                    state.currentUser && resetToInitial();
-                  }
-                }}
-              >
-                <LogOut size={16} />
-                Reset Data Demo
               </button>
               <button className="user-dropdown-item danger" onClick={handleLogout}>
                 <LogOut size={16} />

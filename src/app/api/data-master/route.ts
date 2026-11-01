@@ -1,99 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DATA_MASTER } from '@/lib/mock-data';
-import { KategoriDataMaster, DataMasterItem } from '@/lib/types';
+import { requireSession } from '@/lib/supabase/route-auth';
+import { keDataMaster } from '@/lib/data/mappers';
 
-/**
- * API Generic Data Master (Tabel 30 Bab 4 - Tahap 6)
- * Mendukung pembacaan dan penambahan data kategori persuratan dinamis
- */
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const kategori = searchParams.get('kategori') as KategoriDataMaster | null;
-    const hanyaAktif = searchParams.get('aktif') !== 'false';
-
-    let items: DataMasterItem[] = [...DATA_MASTER];
-
-    if (kategori) {
-      items = items.filter((d) => d.kategori === kategori);
-    }
-
-    if (hanyaAktif) {
-      items = items.filter((d) => d.aktif);
-    }
-
-    items.sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
-
-    return NextResponse.json({
-      success: true,
-      data: items,
-      total: items.length,
-      kategori: kategori || 'semua',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message || 'Terjadi kesalahan internal server.' },
-      { status: 500 }
-    );
-  }
+  const session = await requireSession();
+  if (session.response) return session.response;
+  const kategori = request.nextUrl.searchParams.get('kategori');
+  let query = session.client.from('data_master').select('*').order('urutan');
+  if (kategori) query = query.eq('kategori', kategori);
+  if (request.nextUrl.searchParams.get('aktif') !== 'false') query = query.eq('aktif', true);
+  const { data: rows, error } = await query;
+  if (error) return NextResponse.json({ galat: 'Gagal memuat data master.' }, { status: 500 });
+  const data = (rows ?? []).map(keDataMaster);
+  return NextResponse.json({ success: true, data, total: data.length, kategori: kategori || 'semua' });
 }
 
 export async function POST(request: NextRequest) {
+  const session = await requireSession();
+  if (session.response) return session.response;
+  if (session.profile.role !== 'admin') return NextResponse.json({ galat: 'Akses ditolak.' }, { status: 403 });
   try {
     const body = await request.json();
-    const { kategori, kode, label, keterangan, urutan, meta } = body;
-
-    if (!kategori || !kode || !label) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Kolom kategori, kode, dan label wajib diisi.',
-        },
-        { status: 400 }
-      );
-    }
-
-    const cleanKode = String(kode).trim().toLowerCase();
-    const cleanLabel = String(label).trim();
-
-    // Validasi keunikan kode dalam kategori
-    const duplicate = DATA_MASTER.find(
-      (d) => d.kategori === kategori && d.kode.toLowerCase() === cleanKode
-    );
-    if (duplicate) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Kode "${cleanKode}" sudah terdaftar pada kategori ${kategori}.`,
-        },
-        { status: 409 }
-      );
-    }
-
-    const newItem: DataMasterItem = {
-      id: `dm-${Date.now()}`,
-      kategori,
-      kode: cleanKode,
-      label: cleanLabel,
-      keterangan: keterangan || '',
-      aktif: true,
-      urutan: Number(urutan) || 1,
-      meta,
-      createdAt: new Date().toISOString(),
-    };
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: `Data master [${kategori}] berhasil ditambahkan.`,
-        data: newItem,
-      },
-      { status: 201 }
-    );
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message || 'Terjadi kesalahan format data request.' },
-      { status: 400 }
-    );
+    const { data, error } = await session.client.rpc('rpc_tambah_data_master', {
+      p_kategori: body.kategori, p_kode: body.kode, p_label: body.label,
+      p_keterangan: body.keterangan ?? '', p_urutan: body.urutan ?? 1, p_meta: body.meta ?? {},
+    });
+    if (error) return NextResponse.json({ galat: error.message }, { status: 400 });
+    return NextResponse.json({ success: true, data }, { status: 201 });
+  } catch {
+    return NextResponse.json({ galat: 'Format permintaan tidak valid.' }, { status: 400 });
   }
 }

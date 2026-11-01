@@ -1,16 +1,4 @@
--- =============================================================================
--- 0004_seed_domain.sql — Seed data master + pengguna demo
---
--- Idempotent (ON CONFLICT DO UPDATE) — aman dijalankan berulang.
--- Isi meniru `src/lib/mock-data.ts` persis supaya tampilan aplikasi tidak
--- berubah setelah migrasi.
---
--- CATATAN: `users.auth_id` diisi oleh `scripts/seed-supabase.mjs` (butuh
--- service_role untuk membuat akun di Supabase Auth). Jalankan skrip itu
--- setelah migrasi ini.
--- =============================================================================
-
--- ── Pengaturan Instansi (singleton) ─────────────────────────────────────────
+-- Data master awal; akun dibuat melalui Supabase Auth.
 INSERT INTO public.pengaturan_instansi (id, nama_pemda, nama_instansi, alamat, telp_fax, logo_path, updated_at)
 VALUES ('pengaturan-1',
         'PEMERINTAH KABUPATEN MINAHASA SELATAN',
@@ -88,27 +76,4 @@ INSERT INTO public.data_master (id, kategori, kode, label, keterangan, aktif, ur
  ('dm-instansi-7','instansi_asal','POKTAN-MAESA','Kelompok Tani Maesa Jaya Amurang Barat','Organisasi Gabungan Kelompok Tani binaan dinas',true,7,'{}'::jsonb,now(),now())
 ON CONFLICT (kategori, kode) DO UPDATE SET
   label = EXCLUDED.label, keterangan = EXCLUDED.keterangan, urutan = EXCLUDED.urutan,
-  updated_at = now();
-
--- ── Pengguna demo ───────────────────────────────────────────────────────────
--- auth_id diisi oleh scripts/seed-supabase.mjs
-INSERT INTO public.users (id, nama, email, role, unit_kerja_id, nip, jabatan, url_tanda_tangan, aktif, created_at, updated_at) VALUES
- ('u-1','Rina Margaretha','admin@distan.go.id','admin',NULL,NULL,NULL,NULL,true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-2','Johan Tumewu','petugas1@distan.go.id','petugas_surat','uk-1',NULL,NULL,NULL,true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-3','Sartika Polii','petugas2@distan.go.id','petugas_surat','uk-1',NULL,NULL,NULL,true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-4','Dr. Ir. Ventje Rantung, M.Si','sekretaris@distan.go.id','sekretaris','uk-1','197005121995031001','Sekretaris Dinas Pertanian','/docs/ttd-sekdis.svg',true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-5','Feybie F. Pusung, S.Pt, M.Si','kadis@distan.go.id','kepala_dinas',NULL,'197402262000032002','Kepala Dinas Pertanian','/docs/ttd-kadis.svg',true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-6','Ir. Henny Tamboto, M.Si','kabid.peternakan@distan.go.id','kepala_bidang','uk-6',NULL,NULL,NULL,true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-7','Dr. Steven Lontoh','kabid.tph@distan.go.id','kepala_bidang','uk-3',NULL,NULL,NULL,true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-8','Ir. Grace Wenas, M.P','kabid.sarpras@distan.go.id','kepala_bidang','uk-4',NULL,NULL,NULL,true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-9','Ir. Martha Liando, M.Si','kabid.perkebunan@distan.go.id','kepala_bidang','uk-2',NULL,NULL,NULL,true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-10','Drs. Ronny Pangkey','kabid.penyuluhan@distan.go.id','kepala_bidang','uk-5',NULL,NULL,NULL,true,'2026-01-10T08:00:00Z'::timestamptz,now()),
- ('u-11','Santi Mamonto','staf.peternakan@distan.go.id','staf_pelaksana','uk-6',NULL,NULL,NULL,true,'2026-02-01T08:00:00Z'::timestamptz,now()),
- ('u-12','Budi Sumolang','staf.tph@distan.go.id','staf_pelaksana','uk-3',NULL,NULL,NULL,true,'2026-02-01T08:00:00Z'::timestamptz,now()),
- ('u-13','Dewi Kalalo','staf.sarpras@distan.go.id','staf_pelaksana','uk-4',NULL,NULL,NULL,true,'2026-02-01T08:00:00Z'::timestamptz,now()),
- ('u-14','Ferly Mamusung','staf.perkebunan1@distan.go.id','staf_pelaksana','uk-2',NULL,NULL,NULL,true,'2026-02-01T08:00:00Z'::timestamptz,now()),
- ('u-15','Eko Warouw','staf.penyuluhan@distan.go.id','staf_pelaksana','uk-5',NULL,NULL,NULL,true,'2026-02-01T08:00:00Z'::timestamptz,now())
-ON CONFLICT (id) DO UPDATE SET
-  nama = EXCLUDED.nama, email = EXCLUDED.email, role = EXCLUDED.role,
-  unit_kerja_id = EXCLUDED.unit_kerja_id, nip = EXCLUDED.nip, jabatan = EXCLUDED.jabatan,
   updated_at = now();

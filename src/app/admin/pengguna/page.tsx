@@ -16,6 +16,7 @@ export default function PenggunaPage() {
     apiTogglePengguna,
     apiUploadTandaTangan,
     apiHapusTandaTangan,
+    apiResetPassword,
   } = useBusinessLogic();
 
   const [signatureModalUser, setSignatureModalUser] = useState<User | null>(null);
@@ -27,7 +28,7 @@ export default function PenggunaPage() {
 
   // Modal tambah
   const [showModal, setShowModal]   = useState(false);
-  const [form, setForm]             = useState({ nama: '', email: '', role: 'staf_pelaksana' as UserRole, unitKerjaId: '', dummyPassword: 'staf123' });
+  const [form, setForm]             = useState({ nama: '', email: '', role: 'staf_pelaksana' as UserRole, unitKerjaId: '', password: '' });
   const [formError, setFormError]   = useState('');
 
   // Modal ubah
@@ -37,10 +38,10 @@ export default function PenggunaPage() {
   // Modal toggle (aktifkan/nonaktifkan) — pakai KonfirmasiDialog
   const [toggleTarget, setToggleTarget] = useState<{ id: string; nama: string; aktif: boolean } | null>(null);
 
-  // Modal reset password — simulasi Supabase Auth: tidak pernah menampilkan kata sandi
   const [resetTarget, setResetTarget]   = useState<{ id: string; nama: string; email: string } | null>(null);
   const [resetSent, setResetSent]       = useState(false);
   const [resetting, setResetting]       = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
 
   const isBidang     = (r: UserRole) => r === 'kepala_bidang' || r === 'staf_pelaksana';
   const isSekretariat= (r: UserRole) => r === 'sekretaris' || r === 'petugas_surat';
@@ -62,12 +63,8 @@ export default function PenggunaPage() {
 
   // ── Tambah ──────────────────────────────────────────────────
   const handleRoleChange = (newRole: UserRole) => {
-    const passMap: Partial<Record<UserRole, string>> = {
-      kepala_bidang: 'kabid123', kepala_dinas: 'kadis123',
-      admin: 'admin123', petugas_surat: 'petugas123', sekretaris: 'sekretaris123',
-    };
     const newUnitId = isSekretariat(newRole) ? (sekretariatUnit?.id || '') : '';
-    setForm((prev) => ({ ...prev, role: newRole, unitKerjaId: newUnitId, dummyPassword: passMap[newRole] || 'staf123' }));
+    setForm((prev) => ({ ...prev, role: newRole, unitKerjaId: newUnitId }));
   };
 
   const handleAdd = async () => {
@@ -79,9 +76,9 @@ export default function PenggunaPage() {
       const unitId = isNoUnit(form.role) ? null
         : isSekretariat(form.role) ? (sekretariatUnit?.id || null)
         : (form.unitKerjaId || null);
-      await apiTambahPengguna(form.nama, form.email, form.role, unitId, form.dummyPassword);
+      await apiTambahPengguna(form.nama, form.email, form.role, unitId, form.password);
       setShowModal(false);
-      setForm({ nama: '', email: '', role: 'staf_pelaksana', unitKerjaId: '', dummyPassword: 'staf123' });
+      setForm({ nama: '', email: '', role: 'staf_pelaksana', unitKerjaId: '', password: '' });
     } catch (e: any) { setFormError(e.message); }
   };
 
@@ -113,19 +110,21 @@ export default function PenggunaPage() {
     setToggleTarget(null);
   };
 
-  // ── Reset Password (simulasi Supabase Auth) ────────────────
-  // Produksi: memanggil supabase.auth.admin.generateLink({ type: 'recovery', email })
-  // Prototipe: simulasi kirim tautan atur ulang via email — kata sandi TIDAK pernah ditampilkan
   const handleResetPassword = async () => {
     if (!resetTarget) return;
     setResetting(true);
-    await new Promise((r) => setTimeout(r, 800)); // simulasi API call
-    setResetting(false);
-    setResetSent(true);
-    // Log dicatat oleh apiResetPassword di produksi — prototipe catat manual via addLog
+    try {
+      await apiResetPassword(resetTarget.id, resetPassword);
+      setResetPassword('');
+      setResetSent(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Gagal mengatur ulang kata sandi.');
+    } finally {
+      setResetting(false);
+    }
   };
 
-  const closeResetModal = () => { setResetTarget(null); setResetSent(false); };
+  const closeResetModal = () => { if (resetting) return; setResetTarget(null); setResetSent(false); setResetPassword(''); };
 
   return (
     <DashboardLayout>
@@ -321,9 +320,9 @@ export default function PenggunaPage() {
                   </div>
                 )}
                 <div className="form-group">
-                  <label className="form-label" htmlFor="add-pass">Kata Sandi Awal (Prototipe) <span className="required">*</span></label>
-                  <input id="add-pass" className="form-input" type="text" value={form.dummyPassword} onChange={(e) => setForm({ ...form, dummyPassword: e.target.value })} />
-                  <p className="form-hint">Produksi: Supabase Auth akan mengirim tautan undangan ke email pengguna, bukan membuat kata sandi secara manual.</p>
+                  <label className="form-label" htmlFor="add-pass">Kata Sandi Awal <span className="required">*</span></label>
+                <input id="add-pass" className="form-input" type="password" autoComplete="new-password" minLength={12} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                  <p className="form-hint">Minimal 12 karakter. Sampaikan kepada pemilik akun melalui saluran pribadi.</p>
                 </div>
               </div>
               <div className="modal-footer">
@@ -405,7 +404,6 @@ export default function PenggunaPage() {
           bahaya={toggleTarget?.aktif}
         />
 
-        {/* ── Modal: Reset Kata Sandi (simulasi Supabase Auth) ─ */}
         {resetTarget && (
           <div className="modal-overlay" onClick={closeResetModal}>
             <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
@@ -417,28 +415,25 @@ export default function PenggunaPage() {
                 {!resetSent ? (
                   <>
                     <p style={{ fontSize: 14, color: 'var(--tinta-redup)', marginBottom: 16 }}>
-                      Tautan atur ulang kata sandi akan dikirim ke email{' '}
+                      Atur kata sandi baru untuk{' '}
                       <strong>{resetTarget.email}</strong> atas nama{' '}
                       <strong>{resetTarget.nama}</strong>.
                     </p>
                     <div className="admin-info-box">
                       <Mail size={15} aria-hidden="true" />
                       <span>
-                        Pengguna akan menerima email berisi tautan satu kali pakai untuk mengatur kata sandi baru.
-                        Kata sandi <strong>tidak pernah ditampilkan</strong> di layar ini.
+                        Sampaikan kata sandi baru kepada pemilik akun melalui saluran pribadi.
                       </span>
                     </div>
-                    <div className="admin-warning-box" style={{ marginTop: 12 }}>
-                      ⚠ Aksi ini akan dicatat di Log Aktivitas sistem.
-                    </div>
+                    <label className="form-label" htmlFor="reset-password">Kata sandi baru (minimal 12 karakter)</label>
+                    <input id="reset-password" type="password" className="form-input" autoComplete="new-password" value={resetPassword} onChange={e => setResetPassword(e.target.value)} disabled={resetting} />
                   </>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '24px 0' }}>
                     <CheckCircle2 size={40} style={{ color: 'var(--pinus)', marginBottom: 12 }} aria-hidden="true" />
-                    <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Tautan terkirim</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Kata sandi diperbarui</div>
                     <div style={{ fontSize: 13, color: 'var(--tinta-redup)' }}>
-                      Email atur ulang kata sandi telah dikirim ke <strong>{resetTarget.email}</strong>.<br />
-                      Tautan berlaku selama 1 jam.
+                      Akun <strong>{resetTarget.email}</strong> dapat masuk menggunakan kata sandi baru.
                     </div>
                   </div>
                 )}
@@ -452,10 +447,10 @@ export default function PenggunaPage() {
                     id="btn-kirim-reset"
                     className="btn btn-primary"
                     onClick={handleResetPassword}
-                    disabled={resetting}
+                    disabled={resetting || resetPassword.length < 12}
                   >
                     <Key size={15} aria-hidden="true" />
-                    {resetting ? 'Mengirim…' : 'Kirim Tautan Atur Ulang'}
+                    {resetting ? 'Menyimpan...' : 'Simpan Kata Sandi Baru'}
                   </button>
                 )}
               </div>

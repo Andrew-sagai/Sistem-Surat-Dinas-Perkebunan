@@ -10,13 +10,10 @@
     "test:matriks": "node --experimental-strip-types tests/test-matriks-izin.ts",
     "test:nav": "node --experimental-strip-types tests/test-nav.ts",
     "test:skenario": "node --experimental-strip-types tests/test-skenario-bab4.ts",
-    "test:rls": "node scripts/uji-rls.mjs",
-    "test:storage": "node scripts/uji-storage.mjs",
     "check:sql": "python scripts/check-sql.py && python scripts/check-sql-semantics.py",
     "check:migrasi": "node scripts/cek-migrasi-pglite.mjs",
     "supabase:migrate": "node scripts/migrate.mjs",
-    "seed:supabase": "node scripts/seed-supabase.mjs",
-    "import:mock": "node scripts/import-mock-state.mjs"
+    "supabase:buat-admin": "node scripts/buat-admin.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

@@ -6,7 +6,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from './config'
 /**
  * Klien Supabase untuk Server Component / Route Handler / Server Action.
  * Di Next.js 16 `cookies()` bersifat async.
- * Mengembalikan `null` bila Supabase belum dikonfigurasi (Mode Demo).
+ * Mengembalikan `null` bila Supabase belum dikonfigurasi.
  */
 export async function getSupabaseServer(): Promise<SupabaseClient | null> {
   if (!isSupabaseConfigured()) return null;
